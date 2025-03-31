@@ -37,4 +37,7 @@ runs:
     - name: Start application
       shell: bash
       working-directory: python-greetings
-      run: pm2 start app.py --name greetings-app-${{ inputs.env_name }} -- --port ${{ inputs.port }} 
+      run: |
+          python3 -m venv venv || true
+          
+          pm2 start app.py --name greetings-app-${{ inputs.env_name }} --interpreter ./venv/bin/python -- --port ${{ inputs.port }}
