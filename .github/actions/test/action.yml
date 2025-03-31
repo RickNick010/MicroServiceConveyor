@@ -24,17 +24,50 @@ runs:
       working-directory: course-js-api-framework
       run: npm install
     
-    - name: Run tests
+    - name: Create hosts configuration
       shell: bash
       working-directory: course-js-api-framework
       run: |
-        # Выводим информацию о конфигурации тестов
-        echo "Checking test configuration..."
-        cat config/hosts.json || echo "Config file not found"
+        # Создаем директорию config, если ее нет
+        mkdir -p config
         
-        # Проверяем доступность сервиса перед запуском тестов
-        echo "Checking service availability..."
-        curl -v http://localhost:7001/hello || echo "Service not available on port 7001"
+        # Определяем порт в зависимости от окружения
+        PORT="7001"
+        if [ "${{ inputs.env_name }}" == "staging" ]; then
+          PORT="7002"
+        elif [ "${{ inputs.env_name }}" == "preprod" ]; then
+          PORT="7003"
+        elif [ "${{ inputs.env_name }}" == "prod" ]; then
+          PORT="7004"
+        fi
         
-        # Запускаем тесты с дополнительной информацией
-        npm run greetings greetings_${{ inputs.env_name }}
+        # Создаем файл конфигурации hosts.json
+        cat > config/hosts.json << EOF
+        {
+          "dev": {
+            "host": "http://localhost:7001"
+          },
+          "staging": {
+            "host": "http://localhost:7002"
+          },
+          "preprod": {
+            "host": "http://localhost:7003"
+          },
+          "prod": {
+            "host": "http://localhost:7004"
+          }
+        }
+        EOF
+        
+        # Выводим созданный файл для проверки
+        echo "Created hosts.json:"
+        cat config/hosts.json
+        
+        # Проверка доступности сервиса
+        echo "Checking service availability on port $PORT..."
+        curl -v http://localhost:$PORT/greetings || echo "Service not available or endpoint might be different"
+    
+    - name: Run tests
+      shell: bash
+      working-directory: course-js-api-framework
+      run: npm run greetings greetings_${{ inputs.env_name }}
