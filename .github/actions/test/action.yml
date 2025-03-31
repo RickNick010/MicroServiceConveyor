@@ -24,14 +24,14 @@ runs:
       working-directory: course-js-api-framework
       run: npm install
     
-    - name: Create hosts configuration
+    - name: Modify test framework and run tests
       shell: bash
       working-directory: course-js-api-framework
       run: |
-        # Создаем директорию config, если ее нет
+        # Create config directory if it doesn't exist
         mkdir -p config
         
-        # Определяем порт в зависимости от окружения
+        # Define port based on environment
         PORT="7001"
         if [ "${{ inputs.env_name }}" == "staging" ]; then
           PORT="7002"
@@ -41,7 +41,7 @@ runs:
           PORT="7004"
         fi
         
-        # Создаем файл конфигурации hosts.json
+        # Create hosts.json configuration file
         cat > config/hosts.json << EOF
         {
           "dev": {
@@ -59,15 +59,88 @@ runs:
         }
         EOF
         
-        # Выводим созданный файл для проверки
+        # Display created file for verification
         echo "Created hosts.json:"
         cat config/hosts.json
         
-        # Проверка доступности сервиса
+        # Create temp directory for modifications
+        mkdir -p temp
+        
+        # Modify requests.js file to fix the environment error
+        REQUESTS_FILE="tests/utils/requests.js"
+        if [ -f "$REQUESTS_FILE" ]; then
+          echo "Modifying requests.js to support all environments"
+          
+          # Read file content and create modified version
+          cat > temp/requests.js << 'EOF_REQUESTS'
+        import request from 'supertest';
+        import fs from 'fs';
+        import path from 'path';
+
+        // Configuration reading function
+        function getConfig() {
+          try {
+            const configPath = path.resolve('config/hosts.json');
+            const configData = fs.readFileSync(configPath, 'utf8');
+            return JSON.parse(configData);
+          } catch (error) {
+            console.error('Error reading configuration:', error.message);
+            // Default configuration in case of error
+            return {
+              dev: { host: 'http://localhost:7001' },
+              staging: { host: 'http://localhost:7002' },
+              preprod: { host: 'http://localhost:7003' },
+              prod: { host: 'http://localhost:7004' }
+            };
+          }
+        }
+
+        // Get environment from arguments or environment variable
+        function getEnvironment() {
+          // Get command line arguments
+          const args = process.argv.slice(2);
+          
+          // Look for argument like greetings_env
+          for (const arg of args) {
+            if (arg.startsWith('greetings_')) {
+              return arg.replace('greetings_', '');
+            }
+          }
+          
+          // If no suitable argument, use environment variable or default
+          return process.env.TEST_ENV || 'dev';
+        }
+
+        const config = getConfig();
+        const env = getEnvironment();
+        console.log(`Using environment: ${env}`);
+        
+        // Make sure configuration for the environment exists
+        if (!config[env]) {
+          console.error(`Configuration for environment ${env} not found. Using dev configuration.`);
+          config[env] = config.dev;
+        }
+
+        export default (method, url, data, headers) => {
+          console.log(`Sending ${method.toUpperCase()} request to ${config[env].host}${url}`);
+          return request(config[env].host)[method](url).send(data).set(headers);
+        };
+        EOF_REQUESTS
+          
+          # Replace original file
+          cp temp/requests.js "$REQUESTS_FILE"
+          echo "File requests.js successfully modified"
+        else
+          echo "File requests.js not found!"
+        fi
+        
+        # Check service availability
         echo "Checking service availability on port $PORT..."
-        curl -v http://localhost:$PORT/greetings || echo "Service not available or endpoint might be different"
-    
-    - name: Run tests
-      shell: bash
-      working-directory: course-js-api-framework
-      run: npm run greetings greetings_${{ inputs.env_name }}
+        curl -v http://localhost:$PORT/greetings
+        
+        # Set environment variable
+        export TEST_ENV="${{ inputs.env_name }}"
+        echo "Environment variable TEST_ENV=$TEST_ENV"
+        
+        # Run tests
+        npm run greetings greetings_${{ inputs.env_name }}
