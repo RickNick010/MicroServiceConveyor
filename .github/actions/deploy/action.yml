@@ -38,6 +38,28 @@ runs:
       shell: bash
       working-directory: python-greetings
       run: |
-          python3 -m venv venv || true
-          
-          pm2 start app.py --name greetings-app-${{ inputs.env_name }} --interpreter ./venv/bin/python -- --port ${{ inputs.port }}
+        # Проверяем, что происходит с приложением
+        echo "Current directory: $(pwd)"
+        echo "Python version: $(python3 --version)"
+        
+        # Создаем виртуальное окружение, если его еще нет
+        python3 -m venv venv || true
+        
+        # Активируем виртуальное окружение
+        source venv/bin/activate
+        
+        # Устанавливаем зависимости в виртуальном окружении
+        pip install -r requirements.txt
+        
+        # Проверяем установленные пакеты
+        pip list
+        
+        # Запускаем приложение через pm2 с интерпретатором из виртуального окружения
+        pm2 delete greetings-app-${{ inputs.env_name }} || true
+        pm2 start app.py --name greetings-app-${{ inputs.env_name }} --interpreter $(pwd)/venv/bin/python -- --port ${{ inputs.port }}
+        
+        # Проверяем статус приложения
+        pm2 status
+        
+        # Небольшая задержка для запуска приложения
+        sleep 5

@@ -27,4 +27,14 @@ runs:
     - name: Run tests
       shell: bash
       working-directory: course-js-api-framework
-      run: npm run greetings greetings_${{ inputs.env_name }}
+      run: |
+        # Выводим информацию о конфигурации тестов
+        echo "Checking test configuration..."
+        cat config/hosts.json || echo "Config file not found"
+        
+        # Проверяем доступность сервиса перед запуском тестов
+        echo "Checking service availability..."
+        curl -v http://localhost:7001/hello || echo "Service not available on port 7001"
+        
+        # Запускаем тесты с дополнительной информацией
+        npm run greetings greetings_${{ inputs.env_name }}
