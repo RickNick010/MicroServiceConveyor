@@ -1,0 +1,30 @@
+name: 'Test Python Greetings App'
+description: 'Run tests for Python Greetings application on specified environment'
+
+inputs:
+  env_name:
+    description: 'Environment name (dev, staging, preprod, prod)'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Informational output
+      shell: bash
+      run: echo "Running tests on ${{ inputs.env_name }} environment..."
+    
+    - name: Checkout API test framework
+      uses: actions/checkout@v4
+      with:
+        repository: mtararujs/course-js-api-framework
+        path: course-js-api-framework
+    
+    - name: Install test dependencies
+      shell: bash
+      working-directory: course-js-api-framework
+      run: npm install
+    
+    - name: Run tests
+      shell: bash
+      working-directory: course-js-api-framework
+      run: npm run greetings greetings_${{ inputs.env_name }}
