@@ -24,7 +24,7 @@ runs:
       working-directory: course-js-api-framework
       run: npm install
     
-    - name: Create hosts configuration and run tests
+    - name: Create hosts configuration
       shell: bash
       working-directory: course-js-api-framework
       run: |
@@ -65,11 +65,9 @@ runs:
         
         # Проверка доступности сервиса
         echo "Checking service availability on port $PORT..."
-        curl -v http://localhost:$PORT/greetings
-        
-        # Устанавливаем переменную окружения для тестов
-        export TEST_ENV="${{ inputs.env_name }}"
-        echo "Setting TEST_ENV=$TEST_ENV"
-        
-        # Запускаем тесты без дополнительных аргументов
-        npx mocha 'tests/scenarios/greetings/*.js' --reporter mochawesome --timeout 20000
+        curl -v http://localhost:$PORT/greetings || echo "Service not available or endpoint might be different"
+    
+    - name: Run tests
+      shell: bash
+      working-directory: course-js-api-framework
+      run: npm run greetings greetings_${{ inputs.env_name }}
