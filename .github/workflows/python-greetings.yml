@@ -46,7 +46,7 @@ jobs:
         uses: ./.github/actions/deploy
         with:
           env_name: dev
-          port: 3000
+          port: 7001
         
   tests-on-dev:
     needs: deploy-to-dev
