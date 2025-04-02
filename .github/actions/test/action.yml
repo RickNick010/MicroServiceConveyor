@@ -47,7 +47,6 @@ runs:
         echo "Using port $PORT for ${{ inputs.env_name }} environment"
         echo "port=$PORT" >> $GITHUB_OUTPUT
         
-        # Check if service is running
         echo "Checking service on http://localhost:$PORT/greetings"
         if curl -s -f http://localhost:$PORT/greetings > /dev/null; then
           echo "Service is available at http://localhost:$PORT/greetings"
@@ -66,7 +65,6 @@ runs:
         # Create config directory
         mkdir -p config
         
-        # Create hosts.json with correct port configuration
         cat > config/hosts.json << EOF
         {
           "dev": {
@@ -87,17 +85,15 @@ runs:
         echo "Created hosts.json with port $PORT:"
         cat config/hosts.json
         
-        # Modify requests.js to be more robust
         REQUESTS_FILE="tests/utils/requests.js"
         if [ -f "$REQUESTS_FILE" ]; then
-          echo "Modifying requests.js for better error handling"
+          echo "Modifying requests.js"
           
           cat > temp_requests.js << 'EOF_REQUESTS'
         import request from 'supertest';
         import fs from 'fs';
         import path from 'path';
 
-        // Get configuration from hosts.json
         function getConfig() {
           try {
             const configPath = path.resolve('config/hosts.json');
@@ -105,18 +101,16 @@ runs:
             return JSON.parse(configData);
           } catch (error) {
             console.error('Error reading configuration:', error.message);
-            // Default configuration
             return {
               dev: { host: 'http://localhost:3000' }
             };
           }
         }
 
-        // Get current environment
+
         const env = process.env.TEST_ENV || 'dev';
         const config = getConfig();
         
-        // Ensure we have a configuration for the current environment
         if (!config[env]) {
           console.warn(`Warning: No configuration for ${env} environment, using dev`);
           config[env] = config.dev;
@@ -135,7 +129,7 @@ runs:
           echo "Error: requests.js not found!"
         fi
         
-        # Set the environment variable
+
         export TEST_ENV="${{ inputs.env_name }}"
         echo "Set TEST_ENV=$TEST_ENV"
     
@@ -143,5 +137,5 @@ runs:
       shell: bash
       working-directory: course-js-api-framework
       run: |
-        # Run tests with additional debugging
+
         NODE_DEBUG=http npm run greetings greetings_${{ inputs.env_name }} || echo "Tests failed but continuing workflow"
